@@ -72,3 +72,5 @@ jobs:
         with:
           name: CemixGram-ipa
           path: /Users/Shared/cemixgram-ios/build/artifacts/CemixGram.ipa
+
+# trigger workflow discovery
