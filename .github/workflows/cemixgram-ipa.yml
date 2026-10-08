@@ -30,8 +30,13 @@ jobs:
         run: |
           # Network.swift lives in the TelegramCore submodule, which is pinned
           # upstream — re-apply our patch on top of the checked-out submodule.
+          # Skip when already applied (master carries the repoint in-tree).
           cd $GITHUB_WORKSPACE
-          patch -p1 < cemixgram-server-repoint.patch
+          if grep -q "cemixgramSeedIps" submodules/TelegramCore/Sources/Network/Network.swift; then
+            echo "repoint already present, skipping patch"
+          else
+            patch -p1 < cemixgram-server-repoint.patch
+          fi
           grep -c "cemixgramSeedIps" submodules/TelegramCore/Sources/Network/Network.swift
 
       - name: Create canonical source directory
