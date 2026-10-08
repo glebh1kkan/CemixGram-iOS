@@ -30,9 +30,9 @@ jobs:
         run: |
           # Network.swift lives in the TelegramCore submodule, which is pinned
           # upstream — re-apply our patch on top of the checked-out submodule.
-          cd $GITHUB_WORKSPACE/submodules/TelegramCore
-          git apply ../../cemixgram-server-repoint.patch
-          grep -c "cemixgramSeedIps" Sources/Network/Network.swift
+          cd $GITHUB_WORKSPACE
+          patch -p1 < cemixgram-server-repoint.patch
+          grep -c "cemixgramSeedIps" submodules/TelegramCore/Sources/Network/Network.swift
 
       - name: Create canonical source directory
         run: |
