@@ -530,7 +530,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             // (TON/GRAM) and gift schedule live server-side; the client only
             // needs to reach our datacenter instead of Telegram's.
             let cemixgramSeedIps = ["150.241.70.48"]
-            let cemixgramSeedPort: Int32 = 2398
+            let cemixgramSeedPort: UInt16 = 2398
             let seedAddressList: [Int: [String]]
 
             if testingEnvironment {
