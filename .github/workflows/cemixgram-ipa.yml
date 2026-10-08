@@ -6,6 +6,7 @@ on:
 jobs:
   build:
     runs-on: macos-26
+    timeout-minutes: 360
 
     steps:
       - uses: actions/checkout@v4
@@ -19,11 +20,23 @@ jobs:
           # mirrors don't exist — point them back at the upstream org.
           git config submodule."submodules/rlottie/rlottie".url https://github.com/TelegramMessenger/rlottie.git
           git config submodule."submodules/TgVoipWebrtc/tgcalls".url https://github.com/TelegramMessenger/tgcalls.git
-          git submodule update --init --recursive
+          # Multi-GB fetch over a shared runner network — retry instead of
+          # failing the whole run on one bad connection.
+          for i in 1 2 3; do
+            git submodule update --init --recursive && break
+            echo "submodule update attempt $i failed, retrying..."
+            sleep 30
+          done
+          git submodule update --init --recursive --checkout
 
       - name: Set active Xcode path
         run: |
           XCODE_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["xcode"]);')
+          if [ ! -d "/Applications/Xcode_$XCODE_VERSION.app" ]; then
+            echo "Xcode $XCODE_VERSION not installed. Available:"
+            ls -d /Applications/Xcode_*.app 2>/dev/null || echo "(none)"
+            exit 1
+          fi
           sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
 
       - name: Apply CemixGram server repoint
@@ -45,6 +58,41 @@ jobs:
           sudo mkdir -p /Users/Shared
           cp -R $GITHUB_WORKSPACE /Users/Shared/
           mv /Users/Shared/$(basename $GITHUB_WORKSPACE) /Users/Shared/cemixgram-ios
+          df -h / | tail -1
+
+      - name: Validate codesigning inputs
+        run: |
+          # Fail in seconds (not after hours of build) when the bundle/team
+          # has no matching profile with an aps-environment entitlement.
+          cd /Users/Shared/cemixgram-ios
+          python3 - <<'EOF'
+          import json, os, plistlib, subprocess, sys
+          cfg = json.load(open('build-system/cemixgram-configuration.json'))
+          team, bundle = cfg.get('team_id', ''), ''
+          import re
+          bundle = cfg.get('bundle_id', '')
+          assert team and bundle, 'team_id/bundle_id must be set in cemixgram-configuration.json'
+          want = team + '.' + bundle
+          profdir = 'build-system/fake-codesigning/profiles'
+          for fn in sorted(os.listdir(profdir)):
+              if not fn.endswith('.mobileprovision'):
+                  continue
+              out = subprocess.run(['openssl', 'smime', '-inform', 'der', '-verify',
+                                    '-noverify', '-in', os.path.join(profdir, fn)],
+                                   capture_output=True).stdout
+              try:
+                  ent = plistlib.loads(out)['Entitlements']
+              except Exception:
+                  continue
+              if ent.get('application-identifier') == want:
+                  if 'aps-environment' not in ent:
+                      print(f'profile {fn} matches but lacks aps-environment')
+                      sys.exit(1)
+                  print(f'codesigning OK: {fn} -> {want} (aps={ent["aps-environment"]})')
+                  sys.exit(0)
+          print(f'no profile for {want} in {profdir}')
+          sys.exit(1)
+          EOF
 
       - name: Build the App (unsigned, sideload)
         run: |
@@ -71,13 +119,19 @@ jobs:
       - name: Collect IPA
         run: |
           set -x
+          shopt -s nullglob
           SOURCE_DIR=/Users/Shared/cemixgram-ios
           OUTPUT_PATH="$SOURCE_DIR/build/artifacts"
           rm -rf "$OUTPUT_PATH"
           mkdir -p "$OUTPUT_PATH"
-          for f in $SOURCE_DIR/bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa; do
-            cp "$f" "$OUTPUT_PATH/CemixGram.ipa"
-          done
+          IPAS=($SOURCE_DIR/bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa)
+          if [ ${#IPAS[@]} -eq 0 ]; then
+            echo "Telegram.ipa not found, build tree:"
+            ls "$SOURCE_DIR/bazel-out/" 2>/dev/null || echo "(no bazel-out)"
+            find "$SOURCE_DIR/bazel-out" -maxdepth 4 -name "*.ipa" 2>/dev/null | head
+            exit 1
+          fi
+          cp "${IPAS[0]}" "$OUTPUT_PATH/CemixGram.ipa"
           ls -la "$OUTPUT_PATH"
 
       - name: Upload IPA artifact
