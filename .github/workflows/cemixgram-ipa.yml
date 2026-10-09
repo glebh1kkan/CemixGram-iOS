@@ -138,7 +138,16 @@ jobs:
             exit 1
           fi
           echo "found: $IPA_PATH"
-          cp "$IPA_PATH" "$OUTPUT_PATH/CemixGram.ipa"
+          # CemixGram rebrand: our display name (fake-signed sideload build,
+          # Scarlet/AltStore re-sign on install, so editing is safe).
+          REBRAND_DIR="$(mktemp -d)"
+          unzip -q "$IPA_PATH" -d "$REBRAND_DIR"
+          mv "$REBRAND_DIR/Payload/Telegram.app" "$REBRAND_DIR/Payload/CemixGram.app"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName CemixGram" "$REBRAND_DIR/Payload/CemixGram.app/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName CemixGram" "$REBRAND_DIR/Payload/CemixGram.app/Info.plist"
+          rm -f "$OUTPUT_PATH/CemixGram.ipa"
+          (cd "$REBRAND_DIR" && zip -qr "$OUTPUT_PATH/CemixGram.ipa" Payload)
+          rm -rf "$REBRAND_DIR"
           ls -la "$OUTPUT_PATH"
 
       - name: Upload IPA artifact
