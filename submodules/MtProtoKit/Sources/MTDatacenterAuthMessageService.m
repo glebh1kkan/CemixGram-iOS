@@ -67,6 +67,15 @@ static NSArray<MTDatacenterAuthPublicKey *> *defaultPublicKeys(bool isProduction
              "+aEyZ+uVgLLQbRA1dEjSDZ2iGRy12Mk5gpYc397aYp438fsJoHIgJ2lgMv5h7WY9\n"
              "t6N/byY9Nw9p21Og3AoXSL2q/2IJ1WRUhebgAdGVMlV1fkuOQoEzR7EdpqtQD9Cs\n"
              "5+bfo3Nhmcyvk5ftB0WkJ9z6bNZ7yxrP8wIDAQAB\n"
+             "-----END RSA PUBLIC KEY-----"],
+            // CemixGram: own server key (data/server_rsa.pem), fingerprint 2555360463228175671.
+            [[MTDatacenterAuthPublicKey alloc] initWithPublicKey:@"-----BEGIN RSA PUBLIC KEY-----\n"
+             "MIIBCgKCAQEA2dZRNqD+Atlcbu7WM7qnnjYx6MvWiJIbh2CHUs2maRSeLd/jQ878\n"
+             "Hu3Hom1vedeAgHUoxnm8KKVWgTerJbNl7lMdT7Xwpfg9GeIiL06dicz0bmnAyY6E\n"
+             "tt7F2nAsJbPzc0zXUsfZmQyHOl+zP587XTV/r1Q36clMHGvG8HCBbI4UaX4FoUI9\n"
+             "VsP4/XQeQUfyyi+pnSQQBv9g6rSZKSHKNQeHrS3o8bXPBObPPbHEGmXseFGjMT/u\n"
+             "m0+EcEO+SoXryAmEIpZQuqFTNqvmo18MyRbikAabLFNkQLemHb4MTHtLOIl95adD\n"
+             "95666wbfCWP1MfdcvWz7uY/L+3BWdx6NkwIDAQAB\n"
              "-----END RSA PUBLIC KEY-----"]
         ];
     });
