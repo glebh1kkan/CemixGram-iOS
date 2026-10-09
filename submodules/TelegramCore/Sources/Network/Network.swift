@@ -529,7 +529,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             // CemixGram: custom server seeds. The catalog price override
             // (TON/GRAM) and gift schedule live server-side; the client only
             // needs to reach our datacenter instead of Telegram's.
-            let cemixgramSeedIps = ["31.77.148.196"]
+            let cemixgramSeedIps = ["94.156.237.195"]
             let cemixgramSeedPort: UInt16 = 2398
             let seedAddressList: [Int: [String]]
 
