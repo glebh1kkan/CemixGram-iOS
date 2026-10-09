@@ -526,29 +526,35 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 }
             }
             
-            // CemixGram: custom server seeds. The catalog price override
-            // (TON/GRAM) and gift schedule live server-side; the client only
-            // needs to reach our datacenter instead of Telegram's.
-            let cemixgramSeedIps = ["94.156.237.195"]
-            let cemixgramSeedPort: UInt16 = 2398
+            // CemixGram: custom server seeds. Port 443 rides the nginx
+            // protocol splitter (TLS -> site, raw MTProto -> server) for
+            // carriers that block the native 2398 port.
+            let cemixgramSeedHosts = ["94.156.237.195"]
+            let cemixgramSeedPorts: [UInt16] = [2398, 443]
             let seedAddressList: [Int: [String]]
 
             if testingEnvironment {
                 seedAddressList = [
-                    1: cemixgramSeedIps
+                    1: cemixgramSeedHosts
                 ]
             } else {
                 seedAddressList = [
-                    1: cemixgramSeedIps,
-                    2: cemixgramSeedIps,
-                    3: cemixgramSeedIps,
-                    4: cemixgramSeedIps,
-                    5: cemixgramSeedIps
+                    1: cemixgramSeedHosts,
+                    2: cemixgramSeedHosts,
+                    3: cemixgramSeedHosts,
+                    4: cemixgramSeedHosts,
+                    5: cemixgramSeedHosts
                 ]
             }
 
             for (id, ips) in seedAddressList {
-                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: ips.map { MTDatacenterAddress(ip: $0, port: cemixgramSeedPort, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false, secret: nil) }))
+                var list: [MTDatacenterAddress] = []
+                for ip in ips {
+                    for port in cemixgramSeedPorts {
+                        list.append(MTDatacenterAddress(ip: ip, port: port, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false, secret: nil))
+                    }
+                }
+                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: list))
             }
             
             context.keychain = keychain

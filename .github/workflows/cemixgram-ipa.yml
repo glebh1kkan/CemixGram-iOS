@@ -39,18 +39,13 @@ jobs:
           fi
           sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
 
-      - name: Apply CemixGram server repoint
+      - name: Verify CemixGram server repoint
         run: |
-          # Network.swift lives in the TelegramCore submodule, which is pinned
-          # upstream — re-apply our patch on top of the checked-out submodule.
-          # Skip when already applied (master carries the repoint in-tree).
+          # The repoint lives in-tree (TelegramCore is vendored, not a submodule).
+          # Fail fast if it ever goes missing instead of shipping official seeds.
           cd $GITHUB_WORKSPACE
-          if grep -q "cemixgramSeedIps" submodules/TelegramCore/Sources/Network/Network.swift; then
-            echo "repoint already present, skipping patch"
-          else
-            patch -p1 < cemixgram-server-repoint.patch
-          fi
-          grep -c "cemixgramSeedIps" submodules/TelegramCore/Sources/Network/Network.swift
+          grep -c "cemixgramSeedHosts" submodules/TelegramCore/Sources/Network/Network.swift
+          grep -c "94.156.237.195" submodules/TelegramCore/Sources/Network/Network.swift
 
       - name: Create canonical source directory
         run: |
