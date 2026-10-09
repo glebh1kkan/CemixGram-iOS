@@ -119,19 +119,21 @@ jobs:
       - name: Collect IPA
         run: |
           set -x
-          shopt -s nullglob
           SOURCE_DIR=/Users/Shared/cemixgram-ios
           OUTPUT_PATH="$SOURCE_DIR/build/artifacts"
           rm -rf "$OUTPUT_PATH"
           mkdir -p "$OUTPUT_PATH"
-          IPAS=($SOURCE_DIR/bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa)
-          if [ ${#IPAS[@]} -eq 0 ]; then
+          # Bazel config dir name varies (opt suffixes differ per toolchain),
+          # so locate the IPA instead of globbing a fixed path.
+          IPA_PATH="$(find "$SOURCE_DIR/bazel-out" -name 'Telegram.ipa' 2>/dev/null | head -1)"
+          if [ -z "$IPA_PATH" ]; then
             echo "Telegram.ipa not found, build tree:"
             ls "$SOURCE_DIR/bazel-out/" 2>/dev/null || echo "(no bazel-out)"
-            find "$SOURCE_DIR/bazel-out" -maxdepth 4 -name "*.ipa" 2>/dev/null | head
+            ls "$SOURCE_DIR/bazel-bin/" 2>/dev/null || echo "(no bazel-bin)"
             exit 1
           fi
-          cp "${IPAS[0]}" "$OUTPUT_PATH/CemixGram.ipa"
+          echo "found: $IPA_PATH"
+          cp "$IPA_PATH" "$OUTPUT_PATH/CemixGram.ipa"
           ls -la "$OUTPUT_PATH"
 
       - name: Upload IPA artifact
