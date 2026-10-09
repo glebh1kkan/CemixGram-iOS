@@ -123,9 +123,14 @@ jobs:
           OUTPUT_PATH="$SOURCE_DIR/build/artifacts"
           rm -rf "$OUTPUT_PATH"
           mkdir -p "$OUTPUT_PATH"
-          # Bazel config dir name varies (opt suffixes differ per toolchain),
-          # so locate the IPA instead of globbing a fixed path.
-          IPA_PATH="$(find "$SOURCE_DIR/bazel-out" -name 'Telegram.ipa' 2>/dev/null | head -1)"
+          # bazel-out/<config>/bin is a symlink into the execroot, which plain
+          # find does not descend into — follow it, or take bazel-bin directly.
+          IPA_PATH=""
+          if [ -f "$SOURCE_DIR/bazel-bin/Telegram/Telegram.ipa" ]; then
+            IPA_PATH="$SOURCE_DIR/bazel-bin/Telegram/Telegram.ipa"
+          else
+            IPA_PATH="$(find -L "$SOURCE_DIR/bazel-out" -name 'Telegram.ipa' 2>/dev/null | head -1)"
+          fi
           if [ -z "$IPA_PATH" ]; then
             echo "Telegram.ipa not found, build tree:"
             ls "$SOURCE_DIR/bazel-out/" 2>/dev/null || echo "(no bazel-out)"
