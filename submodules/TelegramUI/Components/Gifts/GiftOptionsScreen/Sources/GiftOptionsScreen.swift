@@ -176,7 +176,7 @@ final class GiftOptionsScreenComponent: Component {
                 guard case let .generic(genericGift) = gift else {
                     continue
                 }
-                if genericGift.auction {
+                if genericGift.flags.contains(.isAuction) {
                     continue
                 }
                 if self.gramPriceCache[genericGift.id] != nil || self.gramPriceProbing.contains(genericGift.id) {
