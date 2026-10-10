@@ -45,5 +45,6 @@ func managedAppUpdateInfo(network: Network, stateManager: AccountStateManager) -
         return .complete()
     }
     
-    return (poll |> then(.complete() |> suspendAwareDelay(12.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+    // CemixGram: fast-moving fork — re-check hourly instead of twice daily.
+    return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
