@@ -4050,7 +4050,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
         
     public func makeStarsPurchaseScreen(context: AccountContext, starsContext: StarsContext, options: [Any], purpose: StarsPurchasePurpose, targetPeerId: EnginePeer.Id?, customTheme: PresentationTheme?, completion: @escaping (Int64) -> Void) -> ViewController {
-        return StarsPurchaseScreen(context: context, starsContext: starsContext, options: options, purpose: purpose, targetPeerId: targetPeerId, customTheme: customTheme, completion: completion)
+        // CemixGram: stars are sold by the store bot, not via Apple IAP.
+        // Open the bot externally and return a controller that dismisses
+        // itself; the caller's completion stays pending (balance refreshes
+        // through the regular stars state updates after purchase).
+        if let botUrl = URL(string: "https://t.me/CemixGram_bot") {
+            UIApplication.shared.open(botUrl, options: [:], completionHandler: nil)
+        }
+        return CemixGramStoreBotRedirectController()
     }
         
     public func makeStarsTransferScreen(context: AccountContext, starsContext: StarsContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, extendedMedia: [TelegramExtendedMedia], inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?, EnginePeer?)?, NoError>, completion: @escaping (Bool) -> Void) -> ViewController {
@@ -4628,4 +4635,22 @@ private func useFlatModalCallsPresentation(context: AccountContext) -> Bool {
         return false
     }
     return true
+}
+
+// CemixGram: placeholder returned instead of the IAP purchase screen. It
+// opens the store bot (see makeStarsPurchaseScreen) and dismisses itself
+// on appear, so every buy-stars entry funnels to the bot.
+private final class CemixGramStoreBotRedirectController: ViewController {
+    init() {
+        super.init(navigationBarPresentationData: nil)
+    }
+
+    required init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        self.dismiss(completion: nil)
+    }
 }

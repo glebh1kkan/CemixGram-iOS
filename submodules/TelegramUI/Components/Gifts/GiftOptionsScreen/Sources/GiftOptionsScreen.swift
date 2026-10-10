@@ -152,6 +152,58 @@ final class GiftOptionsScreenComponent: Component {
         private var switchingFilter = false
         
         private var loadingGiftId: Int64?
+
+        // CemixGram: effective crypto prices. Catalog stars can't express a
+        // TON/GRAM sale-price override, but the payment form invoice can —
+        // probe it once per gift and cache briefly, so badges show grams.
+        private var gramPriceCache: [Int64: (currency: String, amount: Int64, at: TimeInterval)] = [:]
+        private var gramPriceProbing: Set<Int64> = Set()
+
+        private func cemixGramPrice(for giftId: Int64) -> (currency: String, amount: Int64)? {
+            if let entry = self.gramPriceCache[giftId], CFAbsoluteTimeGetCurrent() - entry.at < 300.0 {
+                return (entry.currency, entry.amount)
+            }
+            return nil
+        }
+
+        private func probeGramPrices(_ gifts: [StarGift]) {
+            guard let component = self.component else {
+                return
+            }
+            let context = component.context
+            let peerId = component.peerId
+            for gift in gifts {
+                guard case let .generic(genericGift) = gift else {
+                    continue
+                }
+                if genericGift.auction {
+                    continue
+                }
+                if self.gramPriceCache[genericGift.id] != nil || self.gramPriceProbing.contains(genericGift.id) {
+                    continue
+                }
+                self.gramPriceProbing.insert(genericGift.id)
+                let giftId = genericGift.id
+                let _ = (context.engine.payments.fetchBotPaymentForm(
+                    source: .starGift(hideName: false, includeUpgrade: false, peerId: peerId, giftId: giftId, text: nil, entities: nil),
+                    themeParams: nil)
+                |> deliverOnMainQueue).start(next: { [weak self] form in
+                    guard let self else {
+                        return
+                    }
+                    self.gramPriceProbing.remove(giftId)
+                    var total: Int64 = 0
+                    for price in form.invoice.prices {
+                        total += price.amount
+                    }
+                    self.gramPriceCache[giftId] = (form.invoice.currency, total, CFAbsoluteTimeGetCurrent())
+                    self.state?.updated()
+                }, error: { [weak self] _ in
+                    self?.gramPriceProbing.remove(giftId)
+                }, completed: {
+                })
+            }
+        }
         
         private var _effectiveStarGifts: ([StarGift], StarsFilter, Int)?
         private var effectiveStarGifts: [StarGift]? {
@@ -219,6 +271,7 @@ final class GiftOptionsScreenComponent: Component {
                             return false
                         }
                         self._effectiveStarGifts = (filteredGifts, self.starsFilter, state.starGiftsVersion)
+                        self.probeGramPrices(filteredGifts)
                         return filteredGifts
                     }
                 } else {
@@ -702,6 +755,10 @@ final class GiftOptionsScreenComponent: Component {
                                 } else {
                                     subject = .starGift(gift: gift, price: "# \(priceString)+")
                                 }
+                            } else if let gramPrice = self.cemixGramPrice(for: gift.id), gramPrice.currency != "XTR" {
+                                // CemixGram: crypto sale-price override — show grams.
+                                let amount = formatTonAmountText(gramPrice.amount, dateTimeFormat: environment.dateTimeFormat, maxDecimalPositions: nil)
+                                subject = .starGift(gift: gift, price: "⭐️ \(amount)")
                             } else {
                                 subject = .starGift(gift: gift, price: "# \(presentationStringsFormattedNumber(Int32(gift.price), environment.dateTimeFormat.groupingSeparator))")
                             }

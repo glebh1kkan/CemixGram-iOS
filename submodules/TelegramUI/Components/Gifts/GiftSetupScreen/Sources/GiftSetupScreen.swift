@@ -538,6 +538,17 @@ private final class GiftSetupScreenComponent: Component {
                     }
                 }
                 |> mapToSignal { inputData -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+                    // CemixGram: crypto-priced gifts are bought in the store
+                    // bot, not with stars. The form already told us the real
+                    // invoice currency — bail out to the bot quietly.
+                    if inputData.form.invoice.currency != "XTR" {
+                        self.inProgress = false
+                        self.state?.updated()
+                        if let botUrl = URL(string: "https://t.me/CemixGram_bot") {
+                            UIApplication.shared.open(botUrl, options: [:], completionHandler: nil)
+                        }
+                        return .complete()
+                    }
                     return component.context.engine.payments.sendStarsPaymentForm(formId: inputData.form.id, source: source)
                 }
                 |> deliverOnMainQueue
