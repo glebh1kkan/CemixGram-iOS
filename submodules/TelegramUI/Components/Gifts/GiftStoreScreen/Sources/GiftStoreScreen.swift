@@ -232,9 +232,19 @@ public final class GiftStoreContentComponent: Component {
                             color: ribbonColor
                         )
                                                 
+                        // CemixGram: crypto (TON/GRAM) resale has no stars amount —
+                        // show grams instead of "# 0".
+                        let resalePrice: String
+                        if let starsAmount = uniqueGift.resellAmounts?.first(where: { $0.currency == .stars }) {
+                            resalePrice = "# \(presentationStringsFormattedNumber(Int32(starsAmount.amount.value), component.dateTimeFormat.groupingSeparator))"
+                        } else if let tonAmount = uniqueGift.resellAmounts?.first(where: { $0.currency == .ton }) {
+                            resalePrice = "⭐️ \(formatTonAmountText(tonAmount.amount.value, dateTimeFormat: component.dateTimeFormat, maxDecimalPositions: nil))"
+                        } else {
+                            resalePrice = "# 0"
+                        }
                         let subject: GiftItemComponent.Subject = .uniqueGift(
                             gift: uniqueGift,
-                            price: "# \(presentationStringsFormattedNumber(Int32(uniqueGift.resellAmounts?.first(where: { $0.currency == .stars })?.amount.value ?? 0), component.dateTimeFormat.groupingSeparator))"
+                            price: resalePrice
                         )
                         let _ = visibleItem.update(
                             transition: itemTransition,
